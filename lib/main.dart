@@ -2,13 +2,17 @@ import 'package:camera/camera.dart';
 import 'package:demoproject/FaceRecognition.dart';
 import 'package:demoproject/home.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider_ex/path_provider_ex.dart';
 
 List<CameraDescription> cameras = [];
+List<StorageInfo> storages = [];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
-   
+  storages = await PathProviderEx.getStorageInfo();
+  print(storages.length);
+
   runApp(const MyApp());
 }
 
