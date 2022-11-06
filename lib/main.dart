@@ -1,8 +1,10 @@
 import 'package:camera/camera.dart';
 import 'package:demoproject/FaceRecognition.dart';
 import 'package:demoproject/home.dart';
+import 'package:demoproject/permissionhandle.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider_ex/path_provider_ex.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 List<CameraDescription> cameras = [];
 List<StorageInfo> storages = [];
@@ -11,6 +13,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   cameras = await availableCameras();
   storages = await PathProviderEx.getStorageInfo();
+  PermissionHandle handle = PermissionHandle(Permission.camera);
+  print(await handle.checkPermission());
+
+  PermissionHandle st = PermissionHandle(Permission.storage);
+  st.checkPermission();
+  print(await st.checkPermission());
   print(storages.length);
 
   runApp(const MyApp());

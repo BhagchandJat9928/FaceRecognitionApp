@@ -1,13 +1,12 @@
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:demoproject/FaceRecognition.dart';
 import 'package:demoproject/main.dart';
-import 'package:demoproject/permissionhandle.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image/image.dart' as imageLib;
 import 'package:permission_handler/permission_handler.dart';
+
+import 'newList.dart';
 
 class AddImages extends StatefulWidget {
   const AddImages({Key? key}) : super(key: key);
@@ -17,7 +16,8 @@ class AddImages extends StatefulWidget {
 }
 
 class _AddImagesState extends State<AddImages> {
-  XFile? imageFile;
+  List<dynamic> listbyte = [];
+  int images = 0;
   bool isPermissioned = false;
   bool storage = false;
   bool _cameraInitialized = false;
@@ -25,12 +25,14 @@ class _AddImagesState extends State<AddImages> {
       CameraController(cameras[1], ResolutionPreset.medium);
 
   initializeCamera() async {
-    cameraController.initialize().then((value) {
-      cameraController.startImageStream((image) {
+    await cameraController.initialize().then((value) async {
+      setState(() {
+        _cameraInitialized = true;
+      });
+
+      await cameraController.startImageStream((image) {
+        cameraController.resumePreview();
         savePicture(image);
-        setState(() {
-          _cameraInitialized = true;
-        });
       });
     });
   }
@@ -40,7 +42,6 @@ class _AddImagesState extends State<AddImages> {
     // TODO: implement initState
     super.initState();
 
-    permission();
     initializeCamera();
   }
 
@@ -56,13 +57,12 @@ class _AddImagesState extends State<AddImages> {
       print(_cameraInitialized);
     });
 
-    cameraController.lockCaptureOrientation(DeviceOrientation.portraitUp);
+    Future.delayed(Duration(seconds: 5)).whenComplete(() {
+      //  _cameraInitialized ? cameraController.stopImageStream() : null;
 
-    Future.delayed(Duration(seconds: 7)).then((value) {
-      _cameraInitialized ? cameraController.stopImageStream() : null;
-      _cameraInitialized = false;
-      Navigator.push(
-          context, MaterialPageRoute(builder: (context) => FaceRecognition()));
+      print("${listbyte.length} hello******");
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => NewList(list: listbyte)));
     });
 
     return _cameraInitialized
@@ -84,35 +84,15 @@ class _AddImagesState extends State<AddImages> {
             ));
   }
 
-  Future<void> permission() async {
-    PermissionHandle handle = PermissionHandle(Permission.camera);
-    PermissionHandle st = PermissionHandle(Permission.manageExternalStorage);
-    if (await handle.checkPermission()) {
-      setState(() {
-        isPermissioned = true;
-      });
-    } else {
-      setState(() {
-        isPermissioned = false;
-      });
-    }
-
-    if (await st.checkPermission()) {
-      setState(() {
-        storage = true;
-      });
-    } else {
-      setState(() {
-        storage = false;
-      });
-    }
-  }
-
   Future<void> savePicture(CameraImage image) async {
     imageLib.Image img = ImageUtils().convertYUV420ToImage(image);
 
-    print("$img  ravan");
     try {
+      var im = imageLib.decodeImage(img.getBytes(format: imageLib.Format.rgba));
+      setState(() {
+        listbyte.add(im);
+        print(listbyte.length);
+      });
       saveFile(img);
     } on CameraException catch (e) {
       print(e.toString());
@@ -121,18 +101,26 @@ class _AddImagesState extends State<AddImages> {
   }
 
   Future<void> saveFile(imageLib.Image img) async {
-    if (await Permission.manageExternalStorage.isGranted) {
+    if (await Permission.storage.isGranted) {
       String path = storages[0].rootDir;
       Directory directory = Directory("$path/imageDir");
-      directory.createSync(recursive: true);
-      print(directory.path);
+      if (!await directory.exists()) {
+        directory.create(recursive: true);
+      }
 
-      File file = File("${directory.path}/${img.toString()}");
-      file.createSync(recursive: true);
-      file.writeAsBytes(img.getBytes(format: imageLib.Format.rgba));
+      File file = File("${directory.path}/IMG_$images.jpg");
+      setState(() {
+        images++;
+      });
+
+      if (!await file.exists()) {
+        file.create(recursive: true);
+      }
+
       print(file.path);
+      file.writeAsBytes(img.getBytes(format: imageLib.Format.rgba));
     } else {
-      Permission.manageExternalStorage.request();
+      Permission.storage.request();
       saveFile(img);
     }
   }
